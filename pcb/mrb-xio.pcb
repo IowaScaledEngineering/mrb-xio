@@ -6,7 +6,7 @@ FileVersion[20070407]
 PCB["" 600000 170000]
 
 Grid[500.0 0 0 1]
-Cursor[170000 0 0.000000]
+Cursor[69000 48000 0.000000]
 PolyArea[200000000.000000]
 Thermal[0.500000]
 DRC[800 800 800 1000 2000 800]
@@ -3364,9 +3364,9 @@ Layer(4 "silk")
 	Text[502500 82000 0 100 "+" "clearline"]
 	Text[495500 87500 0 100 "PKT" "clearline"]
 	Text[538500 113500 0 100 "+" "clearline"]
-	Text[83500 55000 0 100 "v1.2" "clearline"]
 	Text[3500 109000 0 100 "Iowa Scaled Engineering" "clearline"]
 	Text[3500 117500 0 100 "CC BY-SA  (C) 2013" "clearline"]
+	Text[83000 55500 0 100 "v2.0" "clearline,selected"]
 )
 NetList()
 (
