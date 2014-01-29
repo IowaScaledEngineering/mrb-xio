@@ -39,8 +39,8 @@ DEFINES = -DMRBUS
 SRCS = $(BASE_NAME).c xio-driver.c ../../libs/avr-i2c/avr-i2c-master.c ../../mrbus2/src/mrbus-avr.c ../../mrbus2/src/mrbus-crc.c ../../mrbus2/src/mrbus-queue.c
 INCS = ../../mrbus2/src/mrbus.h ../../mrbus2/src/mrbus-avr.h ./xio-driver.h ../../libs/avr-i2c/avr-i2c-master.h
  
-AVRDUDE = avrdude -c usbtiny -p $(DEVICE) -B2
-AVRDUDE_SLOW = avrdude -c usbtiny -p $(DEVICE) -B32 
+AVRDUDE = avrdude -c usbtiny -p $(DEVICE) -B2 -F
+AVRDUDE_SLOW = avrdude -c usbtiny -p $(DEVICE) -B32 -F
 
 OBJS = ${SRCS:.c=.o}
 INCLUDES = -I. -I../../mrbus2/src -I../../libs/avr-i2c/

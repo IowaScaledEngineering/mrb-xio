@@ -122,9 +122,9 @@ ISR(ADC_vect)
 	if (++busVoltageCount >= 64)
 	{
 		busVoltageAccum = busVoltageAccum / 64;
-        //At this point, we're at (Vbus/6) / 5 * 1024
-        //So multiply by 300, divide by 1024, or multiply by 150 and divide by 512
-        busVoltage = ((uint32_t)busVoltageAccum * 150) / 512;
+		//At this point, we're at (Vbus/3) / 5 * 1024
+		//So multiply by 150, divide by 1024, or multiply by 75 and divide by 512
+		busVoltage = ((uint32_t)busVoltageAccum * 75) / 512;
 		busVoltageAccum = 0;
 		busVoltageCount = 0;
 	}
@@ -377,8 +377,9 @@ int main(void)
 	sei();	
 	// These must be called after sei(), because they do I2C transactions that need interrupts
 	i2c_master_init();
+
 	{
-	// Initialize MRBus address from EEPROM address 1
+	// Initialize MRBus address from EEPROM address 0x20
 		uint8_t xio0_directions[5];
 		uint8_t i;
 		for(i=0; i<5; i++)
@@ -416,7 +417,7 @@ int main(void)
 		
 			txBuffer[MRBUS_PKT_SRC] = mrbus_dev_addr;
 			txBuffer[MRBUS_PKT_DEST] = 0xFF;
-			txBuffer[MRBUS_PKT_LEN] = 14;
+			txBuffer[MRBUS_PKT_LEN] = 13;
 			txBuffer[5] = 'S';
 			txBuffer[6] = 0; //XIO number 0
 
@@ -425,8 +426,7 @@ int main(void)
 				txBuffer[7+i] = (xio0.io[i] & ~(xio0.direction[i])) | (xio0DebouncedInputs[i] & xio0.direction[i]); // Get outputs from the XIO, inputs from the debounced states
 			}
 
-			txBuffer[13] = busVoltage;
-		
+			txBuffer[12] = busVoltage;
 			mrbusPktQueuePush(&mrbusTxQueue, txBuffer, txBuffer[MRBUS_PKT_LEN]);
 			changed = 0;
 		}	

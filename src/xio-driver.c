@@ -55,12 +55,11 @@ void xioDirectionSet(XIOControl* xio)
 
 void xioInitialize(XIOControl* xio, uint8_t xioAddress, const uint8_t* xioPinDirections)
 {
+	uint8_t i;
 	memset(xio, 0, sizeof(XIOControl));
 		
 	xio->address = xioAddress;
 	xio->status |= XIO_I2C_ERROR;
-
-	memcpy(xio->direction, xioPinDirections, 5);
 
 	PORT(I2C_RESET_PORT) &= ~_BV(I2C_RESET);
 	PORT(I2C_OUT_EN_PORT) |= _BV(I2C_OUT_EN);
@@ -72,6 +71,9 @@ void xioInitialize(XIOControl* xio, uint8_t xioAddress, const uint8_t* xioPinDir
 	PORT(I2C_OUT_EN_PORT) &= ~_BV(I2C_OUT_EN);
 	PORT(I2C_RESET_PORT) |= _BV(I2C_RESET);
 	_delay_us(1);
+
+	for(i=0; i<5; i++)
+		xio->direction[i] = xioPinDirections[i];
 
 	xioDirectionSet(xio);
 	
@@ -86,14 +88,6 @@ void xioOutputWrite(XIOControl* xio)
 {
 	uint8_t i2cBuf[8];
 	uint8_t i;
-	uint8_t baseOutputRegister = 0x08;
-
-	while (0xFF == xio->direction[baseOutputRegister - 0x08] && baseOutputRegister < (0x08 + 5))
-		baseOutputRegister++;
-
-	// If we're at 5, there are no bits set as output
-	if ((0x08 + 5) == baseOutputRegister)
-		return;
 
 	// Reinforce direction
 	xioDirectionSet(xio);
@@ -104,13 +98,13 @@ void xioOutputWrite(XIOControl* xio)
 		xio->status |= XIO_I2C_ERROR;
 
 	i2cBuf[0] = xio->address;
-	i2cBuf[1] = 0x80 | baseOutputRegister;  // 0x80 is auto-increment, 0x08 is the base of the output registers
-	for(i=baseOutputRegister - 0x08; i<5; i++)
+	i2cBuf[1] = 0x80 | 0x08;  // 0x80 is auto-increment, 0x08 is the base of the output registers
+	for(i=0; i<5; i++)
 	{
 		i2cBuf[2+i] = xio->io[i] & ~xio->direction[i];
 	}
 
-	i2c_transmit(i2cBuf, 2+((0x08+5) - baseOutputRegister), 1);
+	i2c_transmit(i2cBuf, 7, 1);
 }
 
 void xioSetIO(XIOControl* xio, uint8_t ioNum, uint8_t state)
@@ -140,14 +134,6 @@ void xioInputRead(XIOControl *xio)
 {
 	uint8_t i2cBuf[8];
 	uint8_t successful = 0;
-	uint8_t baseInputRegister = 0;
-
-	while (0 == xio->direction[baseInputRegister] && baseInputRegister < 5)
-		baseInputRegister++;
-
-	// If we're at 5, there are no bits set as input
-	if (5 == baseInputRegister)
-		return;
 
 	while(i2c_busy());
 
@@ -155,13 +141,13 @@ void xioInputRead(XIOControl *xio)
 		xio->status |= XIO_I2C_ERROR;
 
 	i2cBuf[0] = xio->address;
-	i2cBuf[1] = 0x80 | baseInputRegister;  // 0x80 is auto-increment, 0x00 is base of the input registers
+	i2cBuf[1] = 0x80;  // 0x80 is auto-increment, 0x00 is base of the input registers
 	i2c_transmit(i2cBuf, 2, 0);
 	i2cBuf[0] = xio->address | 0x01;
-	i2c_transmit(i2cBuf, (5 - baseInputRegister) + 1, 1);
+	i2c_transmit(i2cBuf, 6, 1);
 	while(i2c_busy());
 	
-	successful = i2c_receive(i2cBuf, (5 - baseInputRegister) + 1);
+	successful = i2c_receive(i2cBuf, 6);
 
 	if (!successful)
 		// In the event of a read hose-out, don't put crap in the input buffer
@@ -169,12 +155,12 @@ void xioInputRead(XIOControl *xio)
 	else
 	{
 		uint8_t i;
-		for(i=baseInputRegister; i<5; i++)
+		for(i=0; i<5; i++)
 		{
 			// Clear all things marked as inputs, leave outputs alone
 			xio->io[i] &= ~xio->direction[i];
 			// Only set anything that's high and marked as an input
-			xio->io[i] |= (xio->direction[i] | i2cBuf[1+i]);
+			xio->io[i] |= (xio->direction[i] & i2cBuf[1+i]);
 		}
 	}
 }
