@@ -29,7 +29,7 @@ LICENSE:
 #include "Wire.h"
 #include "XIO.h"
 
-#ifndef _BV(a)
+#ifndef _BV
 #define _BV(a) (1<<(a))
 #endif
 
@@ -75,7 +75,7 @@ void XIO::pinModeCached(byte pin, byte mode)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
+	if ((bit > 7) || (bank > 4))
 		return;
 
 	switch(mode)
@@ -98,7 +98,7 @@ void XIO::pinMode(byte pin, byte mode)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
+	if ((bit > 7) || (bank > 4))
 		return;
 
 	pinModeCached(pin, mode);
@@ -111,7 +111,7 @@ void XIO::digitalWriteCached(byte pin, boolean value)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
+	if ((bit > 7) || (bank > 4))
 		return;
 
 	if (value)
@@ -126,7 +126,7 @@ void XIO::digitalWrite(byte pin, boolean value)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
+	if ((bit > 7) || (bank > 4))
 		return;
 
 	digitalWriteCached(pin, value);
@@ -139,8 +139,8 @@ boolean XIO::digitalReadCached(byte pin)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
-		return;
+	if ((bit > 7) || (bank > 4))
+		return false;
 
 	return( (this->pinInputStates[bank] & _BV(bit)) ? HIGH:LOW );
 }
@@ -150,8 +150,8 @@ boolean XIO::digitalRead(byte pin)
 	uint8_t bit = pin & 0x0F;
 	uint8_t bank = (pin>>4) & 0x0F;
 	// If things are out of range, do nothing		
-	if ((bit > 7) || (byte > 4))
-		return;
+	if ((bit > 7) || (bank > 4))
+		return false;
 
 	this->pinInputStates[bank] = getInput(bank);
 
@@ -170,10 +170,9 @@ void XIO::sendOutputConfiguration(byte bank)
 	}
 	
    Wire.beginTransmission(this->addr);
-   Wire.write(0x80 | (0x18 + bank)); // 0x18 is the direction register base, 0x80 is auto-increment
+   Wire.write((uint8_t)(0x80 | (0x18 + bank))); // 0x18 is the direction register base, 0x80 is auto-increment
 	for(i=0; i<numWrites; i++)
 		Wire.write(this->pinDirections[bank+i]);
-   Wire.write();
    Wire.endTransmission();
 }
 
@@ -190,7 +189,6 @@ void XIO::sendOutput(byte bank)
    Wire.write(0x80 | (0x08 + bank)); // 0x08 is the output register base, 0x80 is auto-increment
 	for(i=0; i<numWrites; i++)
 		Wire.write(this->pinOutputStates[bank+i]);
-   Wire.write();
    Wire.endTransmission();
 }
 
@@ -227,7 +225,7 @@ byte XIO::getInput(byte bank)
 
 }
 
-void XIO::refresh(boolean includePinModes=false)
+void XIO::refresh(boolean includePinModes)
 {
 	if (includePinModes)
 		sendOutputConfiguration(0xFF);

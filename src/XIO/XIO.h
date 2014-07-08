@@ -98,7 +98,7 @@ class XIO
 
 		void sendOutputConfiguration(byte bank);
 		byte getInput(byte bank);
-		void sendOutput(byte bank)
+		void sendOutput(byte bank);
 };
 
 #endif
