@@ -215,6 +215,21 @@ void PktHandler(void)
 		mrbusPktQueuePush(&mrbusTxQueue, txBuffer, txBuffer[MRBUS_PKT_LEN]);
 		goto PktIgnore;	
 	}
+	else if ('T' == rxBuffer[MRBUS_PKT_TYPE] && 0xFF != rxBuffer[MRBUS_PKT_DEST]) 
+	{
+		// The test command must be followed by 'E' 'S' 'T' 'O' 'N' to enable test mode
+	
+		// EEPROM WRITE Packet
+		txBuffer[MRBUS_PKT_DEST] = rxBuffer[MRBUS_PKT_SRC];
+		txBuffer[MRBUS_PKT_LEN] = 6;
+		txBuffer[MRBUS_PKT_TYPE] = 't';
+		txBuffer[MRBUS_PKT_SRC] = mrbus_dev_addr;
+		mrbusPktQueuePush(&mrbusTxQueue, txBuffer, txBuffer[MRBUS_PKT_LEN]);
+		
+		
+		
+		goto PktIgnore;	
+	}
 	else if ('R' == rxBuffer[MRBUS_PKT_TYPE]) 
 	{
 		// EEPROM READ Packet
