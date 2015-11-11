@@ -1,12 +1,12 @@
 #*************************************************************************
-#Title:    MRB-XIO Makefile
+#Title:    MRB-XIO Example Firmware Makefile
 #Authors:  Michael Petersen <railfan@drgw.net>
 #          Nathan Holmes <maverick@drgw.net>
 #File:     MRB-AVRTEMPLATE Makefile
 #License:  GNU General Public License v3
 #
 #LICENSE:
-#    Copyright (C) 2013 Nathan Holmes and Michael Petersen
+#    Copyright (C) 2015 Nathan Holmes and Michael Petersen
 #
 #    Derived from example WinAVR project Makefile
 #
@@ -34,35 +34,73 @@ FUSE_L  = 0xD7
 FUSE_H  = 0xD1
 FUSE_E  = 0x04
 
-# MRBus
-DEFINES = -DMRBUS
-SRCS = $(BASE_NAME).c xio-driver.c ../../libs/avr-i2c/avr-i2c-master.c ../../mrbus2/src/mrbus-avr.c ../../mrbus2/src/mrbus-crc.c ../../mrbus2/src/mrbus-queue.c
-INCS = ../../mrbus2/src/mrbus.h ../../mrbus2/src/mrbus-avr.h ./xio-driver.h ../../libs/avr-i2c/avr-i2c-master.h
- 
-AVRDUDE = avrdude -c usbtiny -p $(DEVICE) -B2 -F
-AVRDUDE_SLOW = avrdude -c usbtiny -p $(DEVICE) -B32 -F
+GITREV := 'GIT_REV=0x$(shell git rev-parse --short=6 HEAD)L'
+
+MRBUS_DIRECTORY=./mrbus/src
+I2CLIB_DIRECTORY=./avr-i2c/
+
+# PROGRAMMER_TYPE defines the programmer to be used
+# Common options are usbtiny and avrispmkii
+PROGRAMMER_TYPE=avrispmkii
+#PROGRAMMER_TYPE=usbtiny
+PROGRAMMER_PORT=usb
+
+SRCS = $(BASE_NAME).c xio-driver.c
+INCS = xio-driver.h
+INCLUDES =
+
+# I2C Lib
+SRCS += $(I2CLIB_DIRECTORY)/avr-i2c-master.c
+INCS += $(I2CLIB_DIRECTORY)/avr-i2c-master.h
+INCLUDES += -I$(I2CLIB_DIRECTORY)
+
+# Wired GIO
+DEFINES = -DMRBUS -DENABLE_WATCHDOG -D$(GITREV)
+SRCS += $(MRBUS_DIRECTORY)/mrbus-avr.c $(MRBUS_DIRECTORY)/mrbus-crc.c $(MRBUS_DIRECTORY)/mrbus-queue.c
+INCS += $(MRBUS_DIRECTORY)/mrbus.h $(MRBUS_DIRECTORY)/mrbus-avr.h
+INCLUDES += -I$(MRBUS_DIRECTORY)
+
+# Wireless GIO (Future)
+#DEFINES = -DMRBEE -DENABLE_WATCHDOG -D$(GITREV) -DXBEE_IGNORE_FLOW=1
+#SRCS += $(MRBUS_DIRECTORY)/mrbee-avr.c $(MRBUS_DIRECTORY)/mrbus-crc.c $(MRBUS_DIRECTORY)/mrbus-queue.c
+#INCS += $(MRBUS_DIRECTORY)/mrbee.h $(MRBUS_DIRECTORY)/mrbee-avr.h
+#INCLUDES += -I$(MRBUS_DIRECTORY)
+
+
+AVRDUDE = avrdude -P $(PROGRAMMER_PORT) -c $(PROGRAMMER_TYPE) -p $(DEVICE) -B1 -F
+AVRDUDE_SLOW = avrdude -P $(PROGRAMMER_PORT) -c $(PROGRAMMER_TYPE) -p $(DEVICE) -B32 -F
 
 OBJS = ${SRCS:.c=.o}
-INCLUDES = -I. -I../../mrbus2/src -I../../libs/avr-i2c/
-CFLAGS  = $(INCLUDES) -Wall -O2 -std=c99
+INCLUDES += -I.
+CFLAGS  = $(INCLUDES) -Wall -O2 -std=gnu99 -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,-gc-sections
 
-COMPILE = avr-gcc $(DEFINES) -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE)
+COMPILE = avr-gcc $(DEFINES) -DF_CPU=$(F_CPU) $(CFLAGS) $(LDFLAGS) -mmcu=$(DEVICE)
 
 # -E -dM options preprocess only and output results of #define
 #COMPILE = avr-gcc -Wall -Os -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE) -E -dM
 
 help:
+	@echo "make setup...... init/update git submodules"
 	@echo "make hex ....... build $(BASE_NAME).hex"
 	@echo "make flash ..... flash the firmware"
 	@echo "make fuse ...... flash the fuses"
 	@echo "make program ... flash fuses and firmware"
 	@echo "make read ...... read the fuses"
+	@echo "make size ...... memory usage"
 	@echo "make clean ..... delete objects and hex file"
-	@echo "make release.... produce release tarball"
+	@echo "make terminal... open up avrdude terminal"
 
 hex: $(BASE_NAME).hex
 
 program: fuse flash
+
+setup:
+	git submodule init
+	git submodule update
+
+terminal:
+	$(AVRDUDE_SLOW) -t
 
 # rule for programming fuse bits:
 fuse:
@@ -73,8 +111,8 @@ fuse:
 read:
 	$(AVRDUDE) -v
 
-terminal:
-	$(AVRDUDE) -t
+size:
+	avr-size -C --mcu=$(DEVICE) $(BASE_NAME).elf
 
 # rule for uploading firmware:
 flash: $(BASE_NAME).hex
@@ -117,46 +155,3 @@ disasm:	$(BASE_NAME).elf
 
 PWD := $(shell pwd)
 
-release: hex
-	@echo -n "Creating temporary build directories..."
-	@$(eval BTMPDIR := $(shell mktemp -d))
-	@$(eval TMPDIR := $(BTMPDIR)/$(BASE_NAME))
-	@$(eval BOILERPLATE_FILES := $(shell find ../../docs/release-boilerplate -type f -name *.txt -print))
-	@$(eval RELEASE_TIME := $(shell date +"%d%b%Y-%H%Mh"))
-	@mkdir -p $(TMPDIR)/mrbus/src
-	@mkdir -p $(TMPDIR)/$(BASE_NAME)/src
-	@echo "  [done]"
-
-	@echo -n "Copying boilerplate files..."
-	@cp $(BOILERPLATE_FILES) $(TMPDIR)
-	@echo "  [done]"
-
-	@echo -n "Copying Makefile..."
-	@cp Makefile $(TMPDIR)/$(BASE_NAME)/src/Makefile
-
-	@echo -n "Copying object..."
-	@cp $(BASE_NAME).hex $(TMPDIR)/$(BASE_NAME)/src/$(BASE_NAME).hex
-	@echo "  [done]"
-
-	@echo -n "Copying source files..."
-	@tar cPf - $(INCS) | tar xPf - -C $(TMPDIR)/$(BASE_NAME)/src/
-	@echo "  [done]"
-
-	@echo -n "Copying include files..."
-	@tar cPf - $(SRCS) | tar xPf - -C $(TMPDIR)/$(BASE_NAME)/src/
-	@echo "  [done]"
-
-	@echo -n "Writing file SVN statuses..."
-	@echo "### Archive built at $(RELEASE_TIME)" > $(TMPDIR)/$(BASE_NAME)/src/FILE_SVN_VERSIONS
-	@svn status -v $(BOILERPLATE_FILES) >> $(TMPDIR)/$(BASE_NAME)/src/FILE_SVN_VERSIONS
-	@svn status -v Makefile >> $(TMPDIR)/$(BASE_NAME)/src/FILE_SVN_VERSIONS
-	@svn status -v $(INCS) >> $(TMPDIR)/$(BASE_NAME)/src/FILE_SVN_VERSIONS
-	@svn status -v $(SRCS) >> $(TMPDIR)/$(BASE_NAME)/src/FILE_SVN_VERSIONS
-	@echo "  [done]"
-	
-
-	@echo -n "Creating tarball..."
-	@tar zcf $(BASE_NAME)-$(RELEASE_TIME).tgz -C $(BTMPDIR) $(BASE_NAME)
-	@echo "  [done]"
-
-	@echo "Release in $(BASE_NAME)-$(RELEASE_TIME).tgz"
