@@ -41,8 +41,8 @@ I2CLIB_DIRECTORY=../avr-i2c/
 
 # PROGRAMMER_TYPE defines the programmer to be used
 # Common options are usbtiny and avrispmkii
-PROGRAMMER_TYPE=avrispmkii
-#PROGRAMMER_TYPE=usbtiny
+#PROGRAMMER_TYPE=avrispmkii
+PROGRAMMER_TYPE=usbtiny
 PROGRAMMER_PORT=usb
 
 SRCS = $(BASE_NAME).c ../xio-driver.c
