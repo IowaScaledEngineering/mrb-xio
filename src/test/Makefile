@@ -32,7 +32,7 @@ DEVICE  = atmega328p
 F_CPU   = 20000000  # Hz
 FUSE_L  = 0xD7
 FUSE_H  = 0xD1
-FUSE_E  = 0x04
+FUSE_E  = 0xFC
 
 GITREV := 'GIT_REV=0x$(shell git rev-parse --short=6 HEAD)L'
 
@@ -42,7 +42,8 @@ I2CLIB_DIRECTORY=../avr-i2c/
 # PROGRAMMER_TYPE defines the programmer to be used
 # Common options are usbtiny and avrispmkii
 #PROGRAMMER_TYPE=avrispmkii
-PROGRAMMER_TYPE=usbtiny
+#PROGRAMMER_TYPE=usbtiny
+PROGRAMMER_TYPE=iseavrprog
 PROGRAMMER_PORT=usb
 
 SRCS = $(BASE_NAME).c ../xio-driver.c
