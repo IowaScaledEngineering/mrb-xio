@@ -48,7 +48,7 @@ uint8_t xio0DebouncedInputs[5] = {0,0,0,0,0};
 
 volatile uint8_t ticks;
 volatile uint16_t decisecs=0;
-volatile uint16_t update_decisecs=5;
+volatile uint16_t update_decisecs=2;
 
 
 volatile uint8_t status=0;
